@@ -2,11 +2,21 @@ import speech_recognition as sr
 import pyttsx3
 import time
 import asyncio
+from math import pi
+import openai
+
+
+def askGPT(text):
+    openai.api_key = "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"
+    response = openai.Completion.create(engine="text-davinci-003", prompt=text, temperature=0.6, max_tokens=250)
+    return response.choices[0].text
+
 
 r = sr.Recognizer()
 
 engine = pyttsx3.init()
 engine.setProperty('voice', 'ru')
+
 
 async def recognize_speech():
     with sr.Microphone() as source:
@@ -56,8 +66,17 @@ async def recognize_speech():
                 engine.say(f"Будет {result}")
                 engine.runAndWait()
 
+            elif "продиктуй" in text:
+                value = text.replace('продиктуй', '').replace('знаков числа пи', '')
+                engine.say(str(round(pi, int(value))))
+                engine.runAndWait()
+
+
             else:
-                engine.say("Простите, я не понимаю, что вы сказали")
+                response = askGPT(text)
+                print(response)
+                engine.say(response)
+
                 engine.runAndWait()
 
         except:
