@@ -19,7 +19,7 @@ class App(CTk):
         self.geometry("720x720")
         self.title("GPTBot")
         self.resizable(False, False)
-        self.Font = CTkFont("Roboto", 27)
+        self.Font = CTkFont("Verdana", 27)
 
         self.client_label = CTkLabel(self, text="Вы сказали:", font=self.Font)
         self.client_label.pack()
@@ -66,7 +66,7 @@ class App(CTk):
             response = self.askGPT(text).lstrip('\n')
 
             response = response[::-1]
-            response = response[response.find(".") + 1:][::-1]
+            response = response[response.find(".") + 1:][::-1] + '.'
 
             self.bot_answer_text.set(response)
             self.update()
