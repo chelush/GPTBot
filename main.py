@@ -1,89 +1,79 @@
 import speech_recognition as sr
-import pyttsx3
-import time
-import asyncio
-from math import pi
 import openai
+from customtkinter import CTk, CTkLabel, CTkButton, CTkFont, set_appearance_mode, set_default_color_theme
+from tkinter import *
+
+import config
+from subprocess import call
+
+set_appearance_mode("dark")
+set_default_color_theme("dark-blue")
 
 
-def askGPT(text):
-    openai.api_key = "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"
-    response = openai.Completion.create(engine="text-davinci-003", prompt=text, temperature=0.6, max_tokens=250)
-    return response.choices[0].text
+class App(CTk):
+    def __init__(self):
+        super().__init__()
 
+        self.r = sr.Recognizer()
 
-r = sr.Recognizer()
+        self.geometry("720x720")
+        self.title("GPTBot")
+        self.resizable(False, False)
+        self.Font = CTkFont("Roboto", 27)
 
-engine = pyttsx3.init()
-engine.setProperty('voice', 'ru')
+        self.client_label = CTkLabel(self, text="Вы сказали:", font=self.Font)
+        self.client_label.pack()
 
+        self.client_ask_text = StringVar()
+        self.client_ask = CTkLabel(self, textvariable=self.client_ask_text, text_color='white', bg_color='gray',
+                                   wraplength=700, width=700, font=self.Font, corner_radius=2)
+        self.client_ask.pack(ipady=25)
 
-async def recognize_speech():
-    with sr.Microphone() as source:
-        print("Говорите...")
-        audio = r.listen(source)
+        self.bot_label = CTkLabel(self, text="Ответ:", font=self.Font)
+        self.bot_label.pack()
 
-        try:
-            text = r.recognize_google(audio, language="ru-RU").lower()
+        self.bot_answer_text = StringVar()
+        self.bot_answer = CTkLabel(self, textvariable=self.bot_answer_text, text_color='white', bg_color='gray',
+                                   wraplength=700, width=700, font=self.Font, corner_radius=2)
+        self.bot_answer.pack(ipady=75)
+
+        self.say_button = CTkButton(self, text='Сказать', width=250, height=50, command=self.recognize_speech,
+                                    font=self.Font)
+        self.say_button.pack(pady=10)
+
+    def askGPT(self, text):
+        openai.api_key = config.TOKEN
+        response = openai.Completion.create(engine="text-davinci-003", prompt=text, temperature=0.6,
+                                            max_tokens=500,
+                                            top_p=1,
+                                            frequency_penalty=0,
+                                            presence_penalty=1)
+        return response.choices[0].text
+
+    def recognize_speech(self):
+        with sr.Microphone() as source:
+            print("Говорите...")
+            self.client_ask_text.set("Говорите...")
+            self.update()
+            audio = self.r.listen(source)
+
+            text = self.r.recognize_google(audio, language="ru-RU").lower()
             print("Вы сказали: " + text)
+            self.client_ask_text.set(text)
+            self.bot_answer_text.set('Думаю...')
+            self.update()
 
-            if "запусти таймер на" in text:
-                duration = int(text.split()[-2])
+            response = self.askGPT(text).lstrip('\n')
 
-                engine.say(f"Таймер запущен на {duration} секунд")
-                engine.runAndWait()
+            response = response[::-1]
+            response = response[response.find(".") + 1:][::-1]
 
-                await asyncio.sleep(duration)
-
-                engine.say(f"Таймер остановлен.")
-                engine.runAndWait()
-
-
-            elif "останови таймер" in text:
-                engine.say("Таймер остановлен")
-                engine.runAndWait()
-
-                time.sleep(0)
-
-            elif "сколько будет" in text:
-                value1 = int(text.split()[2])
-                value2 = int(text.split()[4])
-                operation = text.split()[3]
-
-                operations = {
-                    'умножить': lambda a, b: a * b,
-                    'х': lambda a, b: a * b,
-                    'плюс': lambda a, b: a + b,
-                    '+': lambda a, b: a + b,
-                    'минус': lambda a, b: a - b,
-                    '-': lambda a, b: a - b,
-                    'делить': lambda a, b: a / b,
-                    '/': lambda a, b: a / b,
-                }
-
-                result = operations[operation](value1, value2)
-
-                engine.say(f"Будет {result}")
-                engine.runAndWait()
-
-            elif "продиктуй" in text:
-                value = text.replace('продиктуй', '').replace('знаков числа пи', '')
-                engine.say(str(round(pi, int(value))))
-                engine.runAndWait()
-
-
-            else:
-                response = askGPT(text)
-                print(response)
-                engine.say(response)
-
-                engine.runAndWait()
-
-        except:
-            engine.runAndWait()
+            self.bot_answer_text.set(response)
+            self.update()
+            print("Бот ответил: " + response)
+            call(["python3", "speak.py", response])
 
 
 if __name__ == '__main__':
-    loop = asyncio.get_event_loop()
-    while True:
-        loop.run_until_complete(recognize_speech())
+    app = App()
+    app.mainloop()
